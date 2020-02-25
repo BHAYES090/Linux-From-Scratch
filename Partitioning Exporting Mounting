@@ -1,0 +1,17 @@
+# /dev/sdb is for my host system, this settting will depend on your host system configuration
+# run the following command to create an ext4 file system on the LFS partition, which is /dev/sdb
+
+mkfs -v -t ext4 /dev/sdb
+
+# set the variable with the following command
+
+export LFS=/mnt/lfs
+
+# verify it is set with the following command
+
+echo $LFS
+
+# Create a new mount point and mount the LFS file system with the following command
+
+mkdir -pv $LFS
+mount -v -t ext4 /dev/sdb $LFS
