@@ -1,0 +1,28 @@
+# Make a /tools directory with the following command, where the sources will be downloaded
+
+mkdir -v $LFS/tools
+
+# Create a symbolic link on the host system this will point to the newley created directory on the LFS partition
+# run as root user
+
+ln -sv $LFS/tools /
+
+# Build packages as unprivilaged user to prevent damage to system, cretae new LFS user with password
+# with the following commands
+
+groupadd lfs
+useradd -s /bin/bash -g lfs -m -k /dev/null lfs
+passwd lfs
+
+# Grant lfs full access to /tools and /sources make lfs the directory owner
+
+chown -v lfs $LFS/tools
+chown -v lfs $LFS/sources
+
+# Make LFS a sudoer and switch to the account with the following command.
+
+su lfs
+
+# The next command could also switch accounts
+
+su - lfs
