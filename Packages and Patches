@@ -2,9 +2,26 @@
 
 mkdir -v $LFS/sources
 
-#with the next command, make the directory "sticky" making it so multiple users cannot have write permission
+# with the next command, make the directory "sticky" making it so multiple users cannot have write permission
 
 chmod -v a+wt $LFS/sources
 
 # download a list of the packages and patched with the next command 
+
+wget --input-file=wget-list --continue --directory-prefix=$LFS/sources
+
+# download the actual packages from the following link http://www.linuxfromscratch.org/lfs/view/stable/wget-list
+# make sure to download these packages to the sources directory use the following command from /sources
+
+wget http://www.linuxfromscratch.org/lfs/view/stable/wget-list
+
+# verify all the correct packages are available with md5sums
+
+pushd $LFS/sources
+md5sum -c md5sums
+popd
+
+# If any packages come back unavailable or corrupt, you can download an updated version from the 
+# following link and use wget to add them to the /sources directory
+# http://www.linuxfromscratch.org/lfs/view/stable/chapter03/packages.html
 
