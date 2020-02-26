@@ -1,0 +1,23 @@
+# set up a good working environment by creating two startup files for bash, remember to be logged in as lfs user 
+#then issue the follwoing command
+
+cat > ~/.bash_profile << "EOF"
+exec env -i HOME=$HOME TERM=$TERM PS1='\u:\w\$ ' /bin/bash
+EOF
+
+# the new instance of the shell is a non-login shell, it does not read /etc/profile or .bash_profile files
+# However it does read .bashrc file, create it with the following command
+
+cat > ~/.bashrc << "EOF"
+set +h
+umask 022
+LFS=/mnt/lfs
+LC_ALL=POSIX
+LFS_TGT=$(uname -m)-lfs-linux-gnu
+PATH=/tools/bin:/bin:/usr/bin
+export LFS LC_ALL LFS_TGT PATH
+EOF
+
+# to have the environment fully prepared for building the temp tools, source the user profile
+
+source ~/.bash_profile
