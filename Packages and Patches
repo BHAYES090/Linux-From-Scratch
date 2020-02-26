@@ -1,0 +1,10 @@
+# Create a sources directory to house the packages and patches with the following command. 
+
+mkdir -v $LFS/sources
+
+#with the next command, make the directory "sticky" making it so multiple users cannot have write permission
+
+chmod -v a+wt $LFS/sources
+
+# download a list of the packages and patched with the next command 
+
