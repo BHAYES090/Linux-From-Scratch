@@ -1,0 +1,209 @@
+# ensure that LFS is still exported with the following command
+
+export LFS=/mnt/lfs
+echo $LFS
+
+# Prepare for pass 1 of Binutils; which contains a linker, assembler and other tools for 
+# handling object files
+
+tar-xvf binutils-2.32.tar #tab to cpomlete 
+cd binutils-2.32
+
+# Binutils requires a separate build directory
+
+mkdir -v build
+cd build
+
+# Prepare binutils for compilation 
+
+../configure --prefix=/tools            \
+             --with-sysroot=$LFS        \
+             --with-lib-path=/tools/lib \
+             --target=$LFS_TGT          \
+             --disable-nls              \
+             --disable-werror
+
+# build the package -j<x> specifies how many CPU cores to allocate to a build. By default I use 1 core to 
+# avoid problems with speed building
+
+make -j1
+
+# if building on x86_64 create a symbolic link to ensure the sanity of the toolchain
+
+case $(uname -m) in
+  x86_64) mkdir -v /tools/lib && ln -sv lib /tools/lib64 ;;
+esac
+
+# install 
+
+make install
+
+# Return to /sources and delete the created directory to save disk space
+
+cd ..
+rm -rf binutils-2.32
+
+####################################################################################################################
+
+# Prepare for GCC pass 1. GCC contains the GNU compilter collection which inclueds C and C++ compilers
+
+tar-xvf gcc-9.2.0.tar #tab to complete
+
+#  move to GCC
+
+cd gcc-9.2.0
+
+# GCC requires several other packages, download them with the following command
+
+tar -xf ../mpfr-4.0.2.tar.xz
+mv -v mpfr-4.0.2 mpfr
+tar -xf ../gmp-6.1.2.tar.xz
+mv -v gmp-6.1.2 gmp
+tar -xf ../mpc-1.1.0.tar.gz
+mv -v mpc-1.1.0 mpc
+
+# the following comamnd will change the location of GCC's dynamic linker to use the one in /tools directory
+
+for file in gcc/config/{linux,i386/linux{,64}}.h
+do
+  cp -uv $file{,.orig}
+  sed -e 's@/lib\(64\)\?\(32\)\?/ld@/tools&@g' \
+      -e 's@/usr@/tools@g' $file.orig > $file
+  echo '
+#undef STANDARD_STARTFILE_PREFIX_1
+#undef STANDARD_STARTFILE_PREFIX_2
+#define STANDARD_STARTFILE_PREFIX_1 "/tools/lib/"
+#define STANDARD_STARTFILE_PREFIX_2 ""' >> $file
+  touch $file.orig
+done
+
+# Configure library for x86_64 
+
+case $(uname -m) in
+  x86_64)
+    sed -e '/m64=/s/lib64/lib/' \
+        -i.orig gcc/config/i386/t-linux64
+ ;;
+esac
+
+
+# GCC requires a separate build directory
+
+mkdir -v build
+cd build
+
+# Prepare GCC for compilation
+
+../configure                                       \
+    --target=$LFS_TGT                              \
+    --prefix=/tools                                \
+    --with-glibc-version=2.11                      \
+    --with-sysroot=$LFS                            \
+    --with-newlib                                  \
+    --without-headers                              \
+    --with-local-prefix=/tools                     \
+    --with-native-system-header-dir=/tools/include \
+    --disable-nls                                  \
+    --disable-shared                               \
+    --disable-multilib                             \
+    --disable-decimal-float                        \
+    --disable-threads                              \
+    --disable-libatomic                            \
+    --disable-libgomp                              \
+    --disable-libquadmath                          \
+    --disable-libssp                               \
+    --disable-libvtv                               \
+    --disable-libstdcxx                            \
+    --enable-languages=c,c++
+    
+# build GCC with the following command
+    
+make -j1
+    
+# insatll with the following command
+    
+make install
+    
+#  remove the created directory from /scources
+    
+cd ..
+rm -rf gcc-9.2.0
+    
+####################################################################################################################
+    
+# Next Linux-5.2.8 API headers will be installed, expose the kernels API for use by GLIBC
+    
+tar -xvf linux-5.2.8.tar # tab to complete
+    
+# change to the directory
+    
+cd Linux-5.2.8
+    
+# make sure no stale files are embedded 
+    
+make mrproper
+    
+# extract the user visable kernel headers from the source
+    
+make INSTALL_HDR_PATH=dest headers_install
+cp -rv dest/include/* /tools/include
+
+#remove the created directory from /sources
+
+cd.. 
+rm -rf linux-5.2.8
+
+####################################################################################################################
+
+# GLIBC contains the main C library, this library provides the basic routines for allocating memory
+# searching directories opening and closing files, reading and writing string handling, pattern matching, math
+# and so on
+
+# unpack GLIBC
+
+tar -xvf glibc-2.30
+
+# change to the GLIBC directory
+
+cd glibc-2.30
+
+# GLIBC requires a separate build directory
+
+mkdir -v build
+cd build
+
+# prepare for compilation
+
+../configure                             \
+      --prefix=/tools                    \
+      --host=$LFS_TGT                    \
+      --build=$(../scripts/config.guess) \
+      --enable-kernel=3.2                \
+      --with-headers=/tools/include
+
+# build
+
+make -j1
+
+# instal the package
+
+make install
+
+# Run the following command to preform a sanity check, if the response is not as follows something is seriously 
+# wrong and can be most likely fixed by returning to the previous packages and going through the process again
+
+echo 'int main(){}' > dummy.c
+$LFS_TGT-gcc dummy.c
+readelf -l a.out | grep ': /tools'
+
+# the response should be as follows
+#####   [Requesting program interpreter: /tools/lib64/ld-linux-x86-64.so.2]   #####
+
+# clean up the test files 
+
+rm -v dummy.c a.out
+
+# remove GLIBC from the /sources directory
+
+cd ..
+rm -rf glibc-2.30
